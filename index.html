@@ -14,7 +14,7 @@ function shutVideos(){[...document.querySelectorAll('video')].forEach(v=>{v.mute
 shutVideos();
 function renderSummary(){const L=[];
 if(custom){L.push('【自创人物】');L.push('姓名：'+custom.name);L.push('身份：'+custom.role);L.push('外观：'+custom.look);L.push('性格：'+custom.personality);L.push('Persona：'+custom.persona);}
-else if(selPerson){L.push('【原版人物】');L.push('人物：'+selPerson[0]+'（'+selPerson[1]+' Arcana）');L.push('Persona：'+selPerson[3]);}
+else if(selPerson){L.push('【原版人物】');L.push('人物：'+selPerson[0]+'（'+selPerson[1]+'）');L.push('Persona：'+selPerson[3]);}
 else{L.push('【还没选人】');L.push('去「原版人物」点一张卡，或去「自创人物」填一份。');}
 L.push('');
 if(selDate){L.push('【时间点】');L.push(selDate[0]+'　'+selDate[1]);}else{L.push('【还没选时间】');L.push('去「时间」点一个节点。');}
@@ -23,12 +23,21 @@ $('#summary').textContent=L.join('\n');}function sub(id){document.querySelectorA
 /* ══ 复制（带 execCommand 回退 —— 平台多在 iframe 里，clipboard API 可能被拒）══ */
 const fb=$('#fb');
 function flash(t){fb.textContent=t;fb.classList.add('show');clearTimeout(flash._t);flash._t=setTimeout(()=>fb.classList.remove('show'),2000)}
-function copyFallback(s){const ta=document.createElement('textarea');ta.value=s;
- ta.setAttribute('readonly','');ta.style.position='fixed';ta.style.top='0';ta.style.left='-9999px';
- document.body.appendChild(ta);ta.select();ta.setSelectionRange(0,s.length);
- let ok=false;try{ok=document.execCommand('copy')}catch(e){ok=false}
- document.body.removeChild(ta);
- flash(ok?'✓ 已复制':'× 复制失败 —— 手动选中上面的文字');}
+function copyFallback(s){
+ /* ⚠ 平台多在 iframe 里，clipboard API 常被拒。先【选中】再 execCommand，
+    就算两条都不行，字也已经被选中了 —— 玩家 Ctrl+C 照样能用。 */
+ const pre=$('#summary');
+ function selAll(){try{const r=document.createRange();r.selectNodeContents(pre);
+   const s2=window.getSelection();s2.removeAllRanges();s2.addRange(r);}catch(e){}}
+ selAll();
+ let ok=false;
+ try{ok=document.execCommand('copy')}catch(e){ok=false}
+ if(!ok){const ta=document.createElement('textarea');ta.value=s;
+   ta.setAttribute('readonly','');ta.style.position='fixed';ta.style.top='0';ta.style.left='-9999px';
+   document.body.appendChild(ta);ta.select();ta.setSelectionRange(0,s.length);
+   try{ok=document.execCommand('copy')}catch(e){ok=false}
+   document.body.removeChild(ta);selAll();}
+ flash(ok?'✓ 已复制':'× 自动复制被拒 —— 文字已选中，按 Ctrl+C');}
 $('#copy').onclick=()=>{const s=$('#summary').textContent;
  if(navigator.clipboard&&navigator.clipboard.writeText){
    navigator.clipboard.writeText(s).then(()=>flash('✓ 已复制'),()=>copyFallback(s));
